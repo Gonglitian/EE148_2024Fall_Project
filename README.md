@@ -4,9 +4,8 @@
   - [ ] Load
   - [ ] Augmentation
 - [ ] Model
-  - [ ] FCN
   - [ ] ENet
-  - [ ] DeepLab
+  - [ ] ResNet
 - [ ] Train Loop
 - [ ] Evaluation
 - [ ] Visulization
