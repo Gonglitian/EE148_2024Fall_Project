@@ -22,16 +22,6 @@ import torch.nn.functional as F
 
 from classes_and_palette import CLASSES, label_colors_list
 
-DATASET_PATH = './data/CamVid'
-
-train_images = glob.glob(f"{DATASET_PATH}/train/*")
-train_images.sort()
-train_segs = glob.glob(f"{DATASET_PATH}/train_labels/*")
-train_segs.sort()
-valid_images = glob.glob(f"{DATASET_PATH}/val/*")
-valid_images.sort()
-valid_segs = glob.glob(f"{DATASET_PATH}/val_labels/*")
-valid_segs.sort()
 
 
 def get_label_mask(mask, class_values):
@@ -65,7 +55,7 @@ class CamVidDataset(Dataset):
             cls.lower()) for cls in classes]
 
     def __len__(self):
-        return len(self.path_images)
+        return len(self.path_images)-1
 
     def __getitem__(self, index):
         image = np.array(Image.open(self.path_images[index]).convert('RGB'))
@@ -99,31 +89,44 @@ def cat_list(images, fill_value=0):
     for img, pad_img in zip(images, batched_imgs):
         pad_img[..., :img.shape[-2], :img.shape[-1]].copy_(img)
     return batched_imgs
-# Dataset Transoframtions which apply in loading phase
-train_image_transform = albumentations.Compose([
-    albumentations.Resize(224, 224, always_apply=True),
-    albumentations.Normalize(
-        always_apply=True)
-])
-valid_image_transform = albumentations.Compose([
-    albumentations.Resize(224, 224, always_apply=True),
-    albumentations.Normalize(
-        always_apply=True)
-])
-train_mask_transform = albumentations.Compose([
-    albumentations.Resize(224, 224, always_apply=True),
-])
-valid_mask_transform = albumentations.Compose([
-    albumentations.Resize(224, 224, always_apply=True),
-])
 
-# Define train and validation datasets
-train_dataset = CamVidDataset(train_images, train_segs, train_image_transform,
-                              train_mask_transform,
-                              label_colors_list,
-                              classes=CLASSES)
 
-valid_dataset = CamVidDataset(valid_images, valid_segs, valid_image_transform,
-                              valid_mask_transform,
-                              label_colors_list,
-                              classes=CLASSES)
+def get_camvid_dataset(dataset_path):
+    train_images = glob.glob(f"{dataset_path}/train/*")
+    train_images.sort()
+    train_segs = glob.glob(f"{dataset_path}/train_labels/*")
+    train_segs.sort()
+    valid_images = glob.glob(f"{dataset_path}/val/*")
+    valid_images.sort()
+    valid_segs = glob.glob(f"{dataset_path}/val_labels/*")
+    valid_segs.sort()
+
+    # Dataset Transoframtions which apply in loading phase
+    train_image_transform = albumentations.Compose([
+        albumentations.Resize(224, 224, always_apply=True),
+        albumentations.Normalize(
+            always_apply=True)
+    ])
+    valid_image_transform = albumentations.Compose([
+        albumentations.Resize(224, 224, always_apply=True),
+        albumentations.Normalize(
+            always_apply=True)
+    ])
+    train_mask_transform = albumentations.Compose([
+        albumentations.Resize(224, 224, always_apply=True),
+    ])
+    valid_mask_transform = albumentations.Compose([
+        albumentations.Resize(224, 224, always_apply=True),
+    ])
+
+    # Define train and validation datasets
+    return (CamVidDataset(train_images, train_segs, train_image_transform,
+                                train_mask_transform,
+                                label_colors_list,
+                                classes=CLASSES)
+                                ,
+    CamVidDataset(valid_images, valid_segs, valid_image_transform,
+                                valid_mask_transform,
+                                label_colors_list,
+                                classes=CLASSES))
+                                

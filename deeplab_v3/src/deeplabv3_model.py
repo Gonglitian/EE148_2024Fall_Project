@@ -140,6 +140,7 @@ class ASPPPooling(nn.Sequential):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         size = x.shape[-2:]
         for mod in self:
+            # print(x.shape) # test
             x = mod(x)
         return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
 

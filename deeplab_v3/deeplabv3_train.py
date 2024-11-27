@@ -6,54 +6,17 @@ import torch
 
 from src import deeplabv3_resnet50
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler
-import transforms as T
+from camvid_dataset import get_camvid_dataset
 
-from camvid_dataset import train_dataset, valid_dataset
-
-class SegmentationPresetTrain:
-    def __init__(self, base_size, crop_size, hflip_prob=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        min_size = int(0.5 * base_size)
-        max_size = int(2.0 * base_size)
-
-        trans = [T.RandomResize(min_size, max_size)]
-        if hflip_prob > 0:
-            trans.append(T.RandomHorizontalFlip(hflip_prob))
-        trans.extend([
-            T.RandomCrop(crop_size),
-            T.ToTensor(),
-            T.Normalize(mean=mean, std=std),
-        ])
-        self.transforms = T.Compose(trans)
-
-    def __call__(self, img, target):
-        return self.transforms(img, target)
-
-
-class SegmentationPresetEval:
-    def __init__(self, base_size, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        self.transforms = T.Compose([
-            T.RandomResize(base_size, base_size),
-            T.ToTensor(),
-            T.Normalize(mean=mean, std=std),
-        ])
-
-    def __call__(self, img, target):
-        return self.transforms(img, target)
-
-
-def get_transform(train):
-    base_size = 520
-    crop_size = 480
-
-    return SegmentationPresetTrain(base_size, crop_size) if train else SegmentationPresetEval(base_size)
-
+# to avoid the warning of albumentations
+os.environ['NO_ALBUMENTATIONS_UPDATE'] = '1'
 
 def create_model(aux, num_classes, pretrain=True):
     model = deeplabv3_resnet50(aux=aux, num_classes=num_classes)
 
     if pretrain:
         weights_dict = torch.load(
-            "./deeplab_v3/deeplabv3_resnet50_coco.pth", map_location='cpu')
+            "deeplabv3_resnet50_coco.pth", map_location='cpu')
 
         if num_classes != 21:
             # 官方提供的预训练权重是21类(包括背景)
@@ -72,6 +35,7 @@ def create_model(aux, num_classes, pretrain=True):
 
 
 def main(args):
+    dataset_path = args.dataset_path
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     batch_size = args.batch_size
     # segmentation nun_classes + background
@@ -82,22 +46,25 @@ def main(args):
         datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
     num_workers = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])
+    # print("Using {} dataloader workers".format(num_workers))
+    train_dataset, valid_dataset = get_camvid_dataset(dataset_path)
+    print(len(train_dataset), len(valid_dataset))
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=batch_size,
                                                num_workers=num_workers,
                                                shuffle=True,
                                                pin_memory=True,
-                                               collate_fn=train_dataset.collate_fn
+                                            #    collate_fn=train_dataset.collate_fn
                                                )
 
     val_loader = torch.utils.data.DataLoader(valid_dataset,
                                              batch_size=1,
                                              num_workers=num_workers,
                                              pin_memory=True,
-                                             collate_fn=valid_dataset.collate_fn
+                                            #  collate_fn=valid_dataset.collate_fn
                                              )
 
-    model = create_model(aux=args.aux, num_classes=num_classes)
+    model = create_model(aux=args.aux, num_classes=num_classes,pretrain=False)
     model.to(device)
 
     params_to_optimize = [
@@ -115,7 +82,7 @@ def main(args):
         lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay
     )
 
-    scaler = torch.amp.GradScaler('cuda') if args.amp else None
+    scaler = torch.cuda.amp.GradScaler() if args.amp else None
 
     # 创建学习率更新策略，这里是每个step更新一次(不是每个epoch)
     lr_scheduler = create_lr_scheduler(
@@ -174,8 +141,8 @@ def main(args):
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser(description="pytorch deeplabv3 training")
-
-    parser.add_argument("--num-classes", default=20, type=int)
+    parser.add_argument("--dataset-path", default="./data/CamVid", help="dataset path")
+    parser.add_argument("--num-classes", default=32, type=int)
     parser.add_argument("--aux", default=True, type=bool, help="auxilier loss")
     parser.add_argument("--device", default="cuda", help="training device")
     parser.add_argument("-b", "--batch-size", default=4, type=int)
