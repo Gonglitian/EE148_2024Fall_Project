@@ -24,13 +24,14 @@ def evaluate(model, data_loader, device, num_classes)->utils.ConfusionMatrix:
         for image, target in metric_logger.log_every(data_loader, 100, header):
             image, target = image.to(device), target.to(device)
             output = model(image)
+            val_loss = criterion(output, target)
             output = output['out']
 
             confmat.update(target.flatten(), output.argmax(1).flatten())
-
+            metric_logger.update(loss=val_loss.item())
         confmat.reduce_from_all_processes()
 
-    return confmat
+    return metric_logger.meters["loss"].global_avg,confmat
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, lr_scheduler, print_freq=10, scaler=None):
