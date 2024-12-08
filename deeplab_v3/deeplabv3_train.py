@@ -119,7 +119,7 @@ def main(args):
         mean_loss, lr = train_one_epoch(model, optimizer, train_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
-        confmat = evaluate(model, val_loader, device=device,
+        val_loss, confmat = evaluate(model, val_loader, device=device,
                            num_classes=num_classes)
         acc, _, iou = confmat.compute()
         val_info = str(confmat)
@@ -128,7 +128,7 @@ def main(args):
         global_acc_list.append(acc.item() * 100)
         iou_list.append(iou.mean().item() * 100)
         train_loss_list.append(mean_loss)
-        val_loss_list.append(confmat.loss)
+        val_loss_list.append(val_loss)
 
         # write into txt
         with open(results_file, "a") as f:
