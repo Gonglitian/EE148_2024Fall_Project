@@ -185,7 +185,7 @@ def parse_args():
                         help="Use torch.cuda.amp for mixed precision training")
     
     # pretrain
-    parser.add_argument("-p","--pretrain", default=True, type=bool, help="use pretrain weights")
+    parser.add_argument("-p","--pretrain",action="store_true", help="use pretrain weights")
     # experiment name
     parser.add_argument("-n","--name", default="deeplabv3", type=str, help="experiment name")
     args = parser.parse_args()
