@@ -9,7 +9,6 @@ from train_utils import train_one_epoch, evaluate, create_lr_scheduler
 from camvid_dataset import get_camvid_dataset
 import numpy as np
 
-# to avoid the warning of albumentations
 
 def create_model(aux, num_classes, pretrain=True):
     model = deeplabv3_resnet50(aux=aux, num_classes=num_classes)
@@ -56,17 +55,18 @@ def main(args):
                                                num_workers=num_workers,
                                                shuffle=True,
                                                pin_memory=True,
-                                            #    collate_fn=train_dataset.collate_fn
+                                               #    collate_fn=train_dataset.collate_fn
                                                )
 
     val_loader = torch.utils.data.DataLoader(valid_dataset,
                                              batch_size=1,
                                              num_workers=num_workers,
                                              pin_memory=True,
-                                            #  collate_fn=valid_dataset.collate_fn
+                                             #  collate_fn=valid_dataset.collate_fn
                                              )
 
-    model = create_model(aux=args.aux, num_classes=num_classes,pretrain=args.pretrain)
+    model = create_model(
+        aux=args.aux, num_classes=num_classes, pretrain=args.pretrain)
     model.to(device)
 
     params_to_optimize = [
@@ -121,7 +121,7 @@ def main(args):
 
         confmat = evaluate(model, val_loader, device=device,
                            num_classes=num_classes)
-        acc,_,iou = confmat.compute()
+        acc, _, iou = confmat.compute()
         val_info = str(confmat)
         print(val_info)
         # append metric
@@ -148,10 +148,13 @@ def main(args):
         torch.save(save_file, "save_weights/model_{}.pth".format(epoch))
 
         # save list to npy
-        np.save(f"./results/{args.name}/global_acc_list.npy", np.array(global_acc_list))
+        np.save(f"./results/{args.name}/global_acc_list.npy",
+                np.array(global_acc_list))
         np.save(f"./results/{args.name}/iou_list.npy", np.array(iou_list))
-        np.save(f"./results/{args.name}/train_loss_list.npy", np.array(train_loss_list))
-        np.save(f"./results/{args.name}/val_loss_list.npy", np.array(val_loss_list))
+        np.save(f"./results/{args.name}/train_loss_list.npy",
+                np.array(train_loss_list))
+        np.save(f"./results/{args.name}/val_loss_list.npy",
+                np.array(val_loss_list))
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
@@ -161,7 +164,8 @@ def main(args):
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser(description="pytorch deeplabv3 training")
-    parser.add_argument("--dataset-path", default="./CamVid", help="dataset path")
+    parser.add_argument(
+        "--dataset-path", default="./CamVid", help="dataset path")
     parser.add_argument("--num-classes", default=32, type=int)
     parser.add_argument("--aux", default=True, type=bool, help="auxilier loss")
     parser.add_argument("--device", default="cuda", help="training device")
@@ -183,11 +187,13 @@ def parse_args():
     # Mixed precision training parameters
     parser.add_argument("--amp", default=False, type=bool,
                         help="Use torch.cuda.amp for mixed precision training")
-    
+
     # pretrain
-    parser.add_argument("-p","--pretrain",action="store_true", help="use pretrain weights")
+    parser.add_argument("-p", "--pretrain",
+                        action="store_true", help="use pretrain weights")
     # experiment name
-    parser.add_argument("-n","--name", default="deeplabv3", type=str, help="experiment name")
+    parser.add_argument("-n", "--name", default="deeplabv3",
+                        type=str, help="experiment name")
     args = parser.parse_args()
 
     return args
