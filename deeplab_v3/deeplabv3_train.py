@@ -7,9 +7,9 @@ import torch
 from src import deeplabv3_resnet50
 from train_utils import train_one_epoch, evaluate, create_lr_scheduler
 from camvid_dataset import get_camvid_dataset
+import numpy as np
 
 # to avoid the warning of albumentations
-os.environ['NO_ALBUMENTATIONS_UPDATE'] = '1'
 
 def create_model(aux, num_classes, pretrain=True):
     model = deeplabv3_resnet50(aux=aux, num_classes=num_classes)
@@ -110,14 +110,26 @@ def main(args):
             scaler.load_state_dict(checkpoint["scaler"])
 
     start_time = time.time()
+    # metric list
+    global_acc_list = []
+    iou_list = []
+    train_loss_list = []
+    val_loss_list = []
     for epoch in range(args.start_epoch, args.epochs):
         mean_loss, lr = train_one_epoch(model, optimizer, train_loader, device, epoch,
                                         lr_scheduler=lr_scheduler, print_freq=args.print_freq, scaler=scaler)
 
         confmat = evaluate(model, val_loader, device=device,
                            num_classes=num_classes)
+        acc,_,iou = confmat.compute()
         val_info = str(confmat)
         print(val_info)
+        # append metric
+        global_acc_list.append(acc.item() * 100)
+        iou_list.append(iou.mean().item() * 100)
+        train_loss_list.append(mean_loss)
+        val_loss_list.append(confmat.loss)
+
         # write into txt
         with open(results_file, "a") as f:
             # 记录每个epoch对应的train_loss、lr以及验证集各指标
@@ -134,6 +146,12 @@ def main(args):
         if args.amp:
             save_file["scaler"] = scaler.state_dict()
         torch.save(save_file, "save_weights/model_{}.pth".format(epoch))
+
+        # save list to npy
+        np.save(f"./results/{args.name}/global_acc_list.npy", np.array(global_acc_list))
+        np.save(f"./results/{args.name}/iou_list.npy", np.array(iou_list))
+        np.save(f"./results/{args.name}/train_loss_list.npy", np.array(train_loss_list))
+        np.save(f"./results/{args.name}/val_loss_list.npy", np.array(val_loss_list))
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
