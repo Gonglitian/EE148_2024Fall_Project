@@ -48,7 +48,9 @@ def main(args):
     num_workers = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])
     # print("Using {} dataloader workers".format(num_workers))
     train_dataset, valid_dataset = get_camvid_dataset(dataset_path)
-    print(len(train_dataset), len(valid_dataset))
+    # length of dataset
+    print(f"train dataset length: {len(train_dataset)}")
+    print(f"valid dataset length: {len(valid_dataset)}")
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=batch_size,
                                                num_workers=num_workers,
@@ -64,7 +66,7 @@ def main(args):
                                             #  collate_fn=valid_dataset.collate_fn
                                              )
 
-    model = create_model(aux=args.aux, num_classes=num_classes,pretrain=False)
+    model = create_model(aux=args.aux, num_classes=num_classes,pretrain=args.pretrain)
     model.to(device)
 
     params_to_optimize = [
@@ -141,14 +143,13 @@ def main(args):
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser(description="pytorch deeplabv3 training")
-    parser.add_argument("--dataset-path", default="./data/CamVid", help="dataset path")
+    parser.add_argument("--dataset-path", default="./CamVid", help="dataset path")
     parser.add_argument("--num-classes", default=32, type=int)
     parser.add_argument("--aux", default=True, type=bool, help="auxilier loss")
     parser.add_argument("--device", default="cuda", help="training device")
     parser.add_argument("-b", "--batch-size", default=4, type=int)
     parser.add_argument("--epochs", default=30, type=int, metavar="N",
                         help="number of total epochs to train")
-
     parser.add_argument('--lr', default=0.0001, type=float,
                         help='initial learning rate')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -164,7 +165,11 @@ def parse_args():
     # Mixed precision training parameters
     parser.add_argument("--amp", default=False, type=bool,
                         help="Use torch.cuda.amp for mixed precision training")
-
+    
+    # pretrain
+    parser.add_argument("-p","--pretrain", default=True, type=bool, help="use pretrain weights")
+    # experiment name
+    parser.add_argument("-n","--name", default="deeplabv3", type=str, help="experiment name")
     args = parser.parse_args()
 
     return args
@@ -175,5 +180,10 @@ if __name__ == '__main__':
 
     if not os.path.exists("./save_weights"):
         os.mkdir("./save_weights")
-
+    # result dir
+    if not os.path.exists("./results"):
+        os.mkdir("./results")
+    # exp name dir under result
+    if not os.path.exists(f"./results/{args.name}"):
+        os.mkdir(f"./results/{args.name}")
     main(args)
