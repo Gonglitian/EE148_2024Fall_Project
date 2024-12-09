@@ -145,7 +145,6 @@ def main(args):
                      "args": args}
         if args.amp:
             save_file["scaler"] = scaler.state_dict()
-        torch.save(save_file, "save_weights/model_{}.pth".format(epoch))
 
         # save list to npy
         np.save(f"./results/{args.name}/global_acc_list.npy",
@@ -156,6 +155,8 @@ def main(args):
         np.save(f"./results/{args.name}/val_loss_list.npy",
                 np.array(val_loss_list))
 
+
+    torch.save(save_file, f"save_weights/{args.name}.pth")
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print("training time {}".format(total_time_str))
