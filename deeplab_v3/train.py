@@ -179,7 +179,7 @@ def parse_args():
     import argparse
     parser = argparse.ArgumentParser(description="pytorch deeplabv3 training")
 
-    parser.add_argument("--data-path", default="/data/", help="VOCdevkit root")
+    parser.add_argument("--data-path", default="../data/", help="VOCdevkit root")
     parser.add_argument("--num-classes", default=20, type=int)
     parser.add_argument("--aux", default=True, type=bool, help="auxilier loss")
     parser.add_argument("--device", default="cuda", help="training device")
